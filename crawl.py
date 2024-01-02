@@ -1,13 +1,18 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import StaleElementReferenceException
 import urllib.request
 import sqlite3
 import time
 
 
-class kleinanzeigen_crawler_autos:
-    def __init__(self, db_file: str = "file.db", remote_web_driver_url: str = 'http://localhost:4444/wd/hub', ) -> None:
+class KleinanzeigenCrawlerAutos:
+
+    SHORT_SLEEP = 1
+    NORMAL_SLEEP = 10
+
+    def __init__(self, db_file: str = "kl_cars.db", remote_web_driver_url: str = 'http://localhost:4444/wd/hub', ) -> None:
         self.options = webdriver.ChromeOptions()
         self.options.add_argument('--ignore-ssl-errors=yes')
         self.options.add_argument('--ignore-certificate-errors')
@@ -18,15 +23,19 @@ class kleinanzeigen_crawler_autos:
         self.cur = None
         self.driver = None
         self.page = 1
+        self.next_sleep_time = 10
         
     
     def startup(self):
         self.con = sqlite3.connect(self.db_file)
 
         self.cur = self.con.cursor()
-        self.cur.execute("""CREATE TABLE IF NOT EXISTS raw (
-                url varchar(2000) PRIMARY KEY,
-                text varchar(2000),
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS car (
+                id int PRIMARY KEY, 
+                brand varchar(50), 
+                model varchar(100), 
+                details varchar(2000), 
+                cb_details varchar(2000),
                 image blob
         )""")
 
@@ -37,11 +46,11 @@ class kleinanzeigen_crawler_autos:
         self.driver.maximize_window()
 
         
-
     def close(self):
         if self.driver is not None:
             self.driver.close()
             self.driver.quit()
+
 
     def fetch_all(self):
         finished = False
@@ -52,55 +61,93 @@ class kleinanzeigen_crawler_autos:
             self.page += 1
         print("finished")
 
+
     def save_items(self, items_in_page):
         for item in items_in_page:
-            img_url = self.fetch_img_url(item)
-            print("fetch " + img_url)
-            data = self.data_as_tuple(item, img_url)
-            exists = self.url_already_saved(img_url)
+            data = self.fetch_data(item[0])
+            if data is None:
+                continue
+            exists = self.id_already_saved(data[0])
+            img_bytes = self.img_bytes(item[1])
             if exists:
                 return True
-            self.save_data(data)
+            self.save_data(data, img_bytes)
+                
 
-            sleep_time = 10
-            print("sleep "+str(sleep_time)+" before continue")
-            time.sleep(sleep_time)
-        finished = False
-        
-            
-
-
-    def fetch_from_page(self) -> bool:
+    def fetch_from_page(self):
         self.driver.get(f"https://www.kleinanzeigen.de/s-autos/seite:{self.page}/c216")
-        return self.driver.find_elements(By.CLASS_NAME, 'ad-listitem    ')
+        self.sleep()
+        items = self.driver.find_elements(By.CLASS_NAME, 'ad-listitem    ')
+        infos = []
+        for item in items:
+            try:
+                article = item.find_element(By.TAG_NAME, "article")
+                rel_url = article.get_attribute("data-href")
+                url = "https://www.kleinanzeigen.de" + rel_url
+                img_url = self.fetch_img_url(item)
+            except Exception:
+                continue
+            if img_url is not None:
+                infos.append((url, img_url))
+        return infos
+            
         
 
     def fetch_img_url(self, item):
         try:
             img_element = item.find_element(By.TAG_NAME, "img")
             return img_element.get_attribute("src")
-        except NoSuchElementException:
-            print("no img tag found. Skipping.")
+        except (NoSuchElementException, StaleElementReferenceException):
             return None
         
-    def data_as_tuple(self, item, img_url):
-        text = item.text
-        img_bytes = urllib.request.urlopen(img_url).read()
-        return (img_url, text, img_bytes)
     
-    def url_already_saved(self, img_url):
-        return self.cur.execute(f"""SELECT * from raw WHERE url = '{img_url}'""").fetchone()
+    def fetch_data(self, url):
+        try:
+            print(f"fetch details from {url}")
+            self.driver.get(url)
+            self.sleep()
+            self.next_sleep_time = KleinanzeigenCrawlerAutos.NORMAL_SLEEP
+            details = self.driver.find_element(By.ID, "viewad-details").text.split("\n")
+            brand = details[1]
+            model = details[3]
+            details_text = ",".join(details[4:])
+            cb_details = self.driver.find_element(By.ID, "viewad-configuration").text.replace("\n", ",")
+            id = self.driver.find_element(By.ID, "viewad-ad-id-box").text.split("\n")[1]
+            return (id, brand, model, details_text, cb_details)
+        except:
+            pass
+
+        
+        
+    def img_bytes(self, img_url):
+        print(f"fetch img bytes from {img_url}")
+        message = urllib.request.urlopen(img_url)
+        self.sleep()
+        if message.getheader('X-From-Cache', 'false') == 'true':
+            self.next_sleep_time = KleinanzeigenCrawlerAutos.SHORT_SLEEP
+        else: 
+            self.next_sleep_time = KleinanzeigenCrawlerAutos.NORMAL_SLEEP
+        img_bytes = message.read()
+        return img_bytes
     
-    def save_data(self, data):
+    
+    def id_already_saved(self, id):
+        return self.cur.execute(f"""SELECT * from car WHERE id = {id}""").fetchone()
+    
+    def save_data(self, data, img_bytes):
         self.cur.execute("""
-                    INSERT INTO raw (url, text, image)
-                    values (?,?,?)    
-                """, (data[0], data[1], sqlite3.Binary(data[2])))
+                    INSERT INTO car (id, brand, model, details, cb_details, image)
+                    values (?,?,?,?,?,?)    
+                """, (data[0], data[1], data[2], data[3], data[4], sqlite3.Binary(img_bytes)))
         self.con.commit()
+
+    def sleep(self):
+        print(f"Sleep for {self.next_sleep_time}")
+        time.sleep(self.next_sleep_time)
         
 
 if __name__ == "__main__":
-    c = kleinanzeigen_crawler_autos(remote_web_driver_url="http://192.168.0.2:4444/wd/hub")
+    c = KleinanzeigenCrawlerAutos(remote_web_driver_url="http://192.168.0.2:4444/wd/hub")
     try:
         c.startup()
         c.fetch_all()
