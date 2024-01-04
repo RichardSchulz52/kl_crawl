@@ -72,6 +72,7 @@ class KleinanzeigenCrawlerAutos:
             if exists:
                 return True
             self.save_data(data, img_bytes)
+        return False
                 
 
     def fetch_from_page(self):
@@ -114,8 +115,8 @@ class KleinanzeigenCrawlerAutos:
             cb_details = self.driver.find_element(By.ID, "viewad-configuration").text.replace("\n", ",")
             id = self.driver.find_element(By.ID, "viewad-ad-id-box").text.split("\n")[1]
             return (id, brand, model, details_text, cb_details)
-        except:
-            pass
+        except Exception as e:
+            print(e)
 
         
         
@@ -132,7 +133,7 @@ class KleinanzeigenCrawlerAutos:
     
     
     def id_already_saved(self, id):
-        return self.cur.execute(f"""SELECT * from car WHERE id = {id}""").fetchone()
+        return self.cur.execute(f"""SELECT * from car WHERE id = {id}""").fetchone() is not None
     
     def save_data(self, data, img_bytes):
         self.cur.execute("""
