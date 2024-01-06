@@ -4,8 +4,8 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import StaleElementReferenceException
 from urllib3.exceptions import ReadTimeoutError
 import urllib.request
-import sqlite3
 import time
+import repository
 
 
 class KleinanzeigenCrawlerAutos:
@@ -15,32 +15,22 @@ class KleinanzeigenCrawlerAutos:
     CONNECTION_TIMEOUT_SLEEP = (5 * 60) + 30
 
     def __init__(self, db_file: str = "kl_cars.db", remote_web_driver_url: str = 'http://localhost:4444/wd/hub') -> None:
+        self.repo = repository.Repository()
+
         self.options = webdriver.ChromeOptions()
         self.options.add_argument('--ignore-ssl-errors=yes')
         self.options.add_argument('--ignore-certificate-errors')
 
-        self.db_file = db_file
         self.remote_web_driver_url = remote_web_driver_url
-        self.con = None
-        self.cur = None
         self.driver = None
         self.page = 1
         self.next_sleep_time = 0
         
     
     def startup(self):
-        self.page = 1
-        self.con = sqlite3.connect(self.db_file)
+        self.repo.open()
 
-        self.cur = self.con.cursor()
-        self.cur.execute("""CREATE TABLE IF NOT EXISTS car (
-                id int PRIMARY KEY, 
-                brand varchar(50), 
-                model varchar(100), 
-                details varchar(2000), 
-                cb_details varchar(2000),
-                image blob
-        )""")
+        self.page = 1
 
         self.driver = webdriver.Remote(
         command_executor=self.remote_web_driver_url,
@@ -53,8 +43,8 @@ class KleinanzeigenCrawlerAutos:
         if self.driver is not None:
             self.driver.close()
             self.driver.quit()
-        if self.con is not None:
-            self.con.close()
+        if self.repo is not None:
+            self.repo.close()
 
 
     def fetch_all(self):
@@ -72,12 +62,12 @@ class KleinanzeigenCrawlerAutos:
             data = self.fetch_data(item[0])
             if data is None:  
                 continue
-            exists = self.id_already_saved(data[0])
+            exists = self.repo.id_exists(data[0])
             img_bytes = self.img_bytes(item[1])
             if exists:
                 print(f"id {data[0]} already in db")
                 return True
-            self.save_data(data, img_bytes)
+            self.repo.safe(data, img_bytes)
         return False
                 
     def get_and_retry(self, url):
@@ -149,18 +139,7 @@ class KleinanzeigenCrawlerAutos:
             self.next_sleep_time = KleinanzeigenCrawlerAutos.NORMAL_SLEEP
         img_bytes = message.read()
         return img_bytes
-    
-    
-    def id_already_saved(self, id):
-        return self.cur.execute(f"""SELECT * from car WHERE id = {id}""").fetchone() is not None
-    
-    def save_data(self, data, img_bytes):
-        self.cur.execute("""
-                    INSERT INTO car (id, brand, model, details, cb_details, image)
-                    values (?,?,?,?,?,?)    
-                """, (data[0], data[1], data[2], data[3], data[4], sqlite3.Binary(img_bytes)))
-        self.con.commit()
-           
+
 
     def sleep(self):
         print(f"Sleep for {self.next_sleep_time}")
