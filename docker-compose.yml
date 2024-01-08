@@ -1,0 +1,15 @@
+version: '1.2'
+
+services:
+  kl_crawl:
+    container_name: kl_crawl
+    build: .
+    image: kl_crawl:latest
+    volumes:
+      - data:/usr/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+
+volumes:
+  data:
+    external: true
