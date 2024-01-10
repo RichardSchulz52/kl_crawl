@@ -8,6 +8,7 @@ class KleinanzeigenCrawlerAutos:
         self.repo = repository.Repository(db_file)
         self.driver = driver.Driver(remote_web_driver_url)
         self.page = 1
+        self.finished = False
         
     
     def startup(self):
