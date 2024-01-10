@@ -2,6 +2,7 @@ FROM python:latest
 
 WORKDIR /usr/app/src
 COPY src ./
+COPY requirements.txt ../
 RUN mkdir -p ../data
 RUN pip install -r ../requirements.txt
 
