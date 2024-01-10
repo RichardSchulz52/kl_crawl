@@ -16,7 +16,7 @@ while True:
         c.startup()
         c.fetch_all()
     except Exception as e:
-        print(f"unexpected error {type(e)}")
+        print(f"unexpected error\n{e}")
     finally:
         c.close()
     if c.finished:

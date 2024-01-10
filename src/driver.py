@@ -38,8 +38,9 @@ class Driver:
 
 
     def close(self):
-        self.driver.close()
-        self.driver.quit()
+        if self.driver is not None:
+            self.driver.close()
+            self.driver.quit()
 
     
     def fetch_from_page(self, page):
