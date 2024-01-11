@@ -48,6 +48,9 @@ class Driver:
         items = self.gateway.call(lambda: self.driver.find_elements(By.CLASS_NAME, 'ad-listitem    '))
         infos = []
         for item in items:
+            topads = self.gateway.call(lambda: item.find_elements(By.CLASS_NAME, 'is-topad'))
+            if len(topads) > 0:
+                continue
             rel_url = self.gateway.call(lambda: self.fetch_rel_url(item))
             if rel_url is None:
                 continue
