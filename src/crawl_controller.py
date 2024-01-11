@@ -3,10 +3,10 @@ import argparse
 import time
 
 parser = argparse.ArgumentParser(
-                    prog='ProgramName',
-                    description='What the program does',
-                    epilog='Text at the bottom of help')
-parser.add_argument('--wd_url', default='http://192.168.0.2:4444/wd/hub', help="The url pinting to the selenium web driver")
+                    prog='Kl Crawler',
+                    description='Crawls data from Kl',
+                    epilog='Use cautiosly')
+parser.add_argument('--wd_url', default='http://192.168.0.2:4444/wd/hub', help="The url pointing to the selenium web driver")
 parser.add_argument('--db_path', default='kl_cars.db', help="Path to the sqlite database file")
 
 args = parser.parse_args()
