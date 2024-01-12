@@ -20,8 +20,8 @@ while True:
     finally:
         c.close()
     if c.finished:
-        print("crawler got all. Sleeping for a minute.")
-        time.sleep(60)
+        print("crawler got all. Sleeping for 30 seconds.")
+        time.sleep(30)
     else:
         print("Some error interupted. Trying again in 5 mins.")
         time.sleep(5 * 60)

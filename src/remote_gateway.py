@@ -3,7 +3,7 @@ from http.client import HTTPResponse
 
 class RemoteGateway:
 
-    CRAWL_SLEEP_TIME = 3
+    CRAWL_SLEEP_TIME = 2
     CACHE_CRAWL_SLEEP_TIME = 1
     RETRY_SLEEP_TIME = 30
 
