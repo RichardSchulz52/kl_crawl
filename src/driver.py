@@ -45,10 +45,10 @@ class Driver:
     
     def fetch_from_page(self, page):
         self.gateway.crawl_call(lambda: self.driver.get(f"https://www.kleinanzeigen.de/s-autos/seite:{page}/c216"))
-        items = self.gateway.call(lambda: self.driver.find_elements(By.CLASS_NAME, 'ad-listitem    '))
+        items = self.driver.find_elements(By.CLASS_NAME, 'ad-listitem    ')
         infos = []
         for item in items:
-            topads = self.gateway.call(lambda: item.find_elements(By.CLASS_NAME, 'is-topad'))
+            topads = item.find_elements(By.CLASS_NAME, 'is-topad')
             if len(topads) > 0:
                 continue
             rel_url = self.gateway.call(lambda: self.fetch_rel_url(item))
@@ -73,21 +73,23 @@ class Driver:
     def fetch_data(self, url):
         print(f"fetch details from {url}")
         self.gateway.crawl_call(lambda: self.driver.get(url))
-        details_element = self.gateway.call(lambda: self.driver.find_element(By.ID, "viewad-details"))
-        if details_element is None:
-            return
+        return self.gateway.call(lambda: self.extract_details())
+        
+    
+    def extract_details(self):
+        title = self.driver.find_element(By.ID, "viewad-title").text
+        price = self.driver.find_element(By.ID, "viewad-price").text.split(" ")[0]
+        date = self.driver.find_element(By.ID, "viewad-extra-info").text.split(" ")[0]
+        place = self.driver.find_element(By.ID, "viewad-locality").text.split(" ")[0]
+        details_element = self.driver.find_element(By.ID, "viewad-details")
         details = details_element.text.split("\n")
         brand = details[1]
         model = details[3]
         details_text = ",".join(details[4:])
-        cb_details_element = self.gateway.call(lambda: self.driver.find_element(By.ID, "viewad-configuration"))
-        id_element = self.gateway.call(lambda: self.driver.find_element(By.ID, "viewad-ad-id-box"))
-        if cb_details_element is None or id_element is None:
-            return
-        cb_details = cb_details_element.text.replace("\n", ",")
-        id = id_element.text.split("\n")[1]
-
-        return (id, brand, model, details_text, cb_details)
+        cb_details = self.driver.find_element(By.ID, "viewad-configuration").text.replace("\n", ",")
+        id = self.driver.find_element(By.ID, "viewad-ad-id-box").text.split("\n")[1]
+        
+        return (id, title, price, date, place, brand, model, details_text, cb_details)
     
 
     def img_bytes(self, img_url):
