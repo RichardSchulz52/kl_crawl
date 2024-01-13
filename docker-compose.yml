@@ -9,6 +9,7 @@ services:
       - data:/usr/app/data
     environment:
       - PYTHONUNBUFFERED=1
+      - wd_url=http://192.168.0.2:4444/wd/hub
 
 volumes:
   data:
