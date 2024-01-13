@@ -11,7 +11,7 @@ parser.add_argument('--wd_url', default='http://192.168.0.2:4444/wd/hub', help="
 parser.add_argument('--db_path', default='kl_cars.db', help="Path to the sqlite database file")
 
 args = parser.parse_args()
-print("wd_url: " + os.environ['wd_url'])
+print("wd_url_: " + os.environ['wd_url'])
 wd_url = os.environ.get('wd_url', args.wd_url)
 c = crawl.KleinanzeigenCrawlerAutos(remote_web_driver_url=wd_url, db_file=args.db_path)
 while True:
