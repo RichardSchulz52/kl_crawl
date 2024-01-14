@@ -94,7 +94,7 @@ class Driver:
 
     def img_bytes(self, img_url):
         print(f"fetch img bytes from {img_url}")
-        message = self.gateway.crawl_call(lambda: urllib.request.urlopen(img_url))
+        message = self.gateway.crawl_call(lambda: urllib.request.urlopen(img_url, timeout=5))
         img_bytes = message.read()
         return img_bytes
 
