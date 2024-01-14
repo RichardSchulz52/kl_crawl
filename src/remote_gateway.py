@@ -34,7 +34,7 @@ class RemoteGateway:
                     handler_func = [error_func_tuple for error_func_tuple in self.error_handlers if error_func_tuple[0] == type(0)][1]
                     handler_func()
                 else:
-                    print(f"Unexpected error {type(e)}")
+                    raise e
         
     
     def crawl_call(self, remote_call):
